@@ -16,8 +16,6 @@ fi
 # Make the path of the desired directory
  mkdir -p $writeDir
 
-# Create File
- touch $(basename $writeDir)
 
 # Write File
 echo $writeStr > $writeFileDir
