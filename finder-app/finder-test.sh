@@ -26,10 +26,10 @@ else
 fi
 
 MATCHSTR="The number of files are ${NUMFILES} and the number of matching lines are ${NUMFILES}"
-
+echo "MATCHSTR" ${MATCHSTR}
 echo "Writing ${NUMFILES} files containing string ${WRITESTR} to ${WRITEDIR}"
 
-rm -rf "${WRITEDIR}"
+ rm -rf "${WRITEDIR}"
 
 # create $WRITEDIR if not assignment1
 assignment=`cat ../conf/assignment.txt`
@@ -55,10 +55,10 @@ fi
 for i in $( seq 1 $NUMFILES)
 do
 	./writer.sh "$WRITEDIR/${username}$i.txt" "$WRITESTR"
+#	echo "write done, $WRITEDIR"
 done
-
 OUTPUTSTRING=$(./finder.sh "$WRITEDIR" "$WRITESTR")
-
+echo "OUTPUTSTRING" ${OUTPUTSTRING}
 # remove temporary directories
 rm -rf /tmp/aeld-data
 
