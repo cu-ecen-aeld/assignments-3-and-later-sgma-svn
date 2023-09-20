@@ -16,10 +16,8 @@ if [ ! -d $filesDir ]; then
 fi
 
 # Matching Files found
-#X=$(find $filesDir -type f -exec grep -l $searchStr {} + | wc -l)
-X=$(find $filesDir -type f -exec grep -l $searchStr {} + | wc -l)
+files=$(find $filesDir -type f -exec grep -l $searchStr {} + | wc -l)
 
 # Number of Matching lines
-#Y=$(grep -r $searchStr $filesDir | wc -l)
-Y=$(grep -r $searchStr $filesDir | wc -l)
-echo "The number of files are $X and the number of matching lines are $Y"
+lines=$(grep -r $searchStr $filesDir | wc -l)
+echo "The number of files are $files and the number of matching lines are $lines"

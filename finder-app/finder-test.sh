@@ -26,8 +26,6 @@ else
 fi
 
 MATCHSTR="The number of files are ${NUMFILES} and the number of matching lines are ${NUMFILES}"
-echo "MATCHSTR" ${MATCHSTR}
-echo "Writing ${NUMFILES} files containing string ${WRITESTR} to ${WRITEDIR}"
 
  rm -rf "${WRITEDIR}"
 
@@ -58,7 +56,6 @@ do
 #	echo "write done, $WRITEDIR"
 done
 OUTPUTSTRING=$(./finder.sh "$WRITEDIR" "$WRITESTR")
-echo "OUTPUTSTRING" ${OUTPUTSTRING}
 # remove temporary directories
 rm -rf /tmp/aeld-data
 
