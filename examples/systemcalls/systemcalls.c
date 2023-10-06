@@ -1,11 +1,9 @@
+#include "stdlib.h"
+#include "sys/wait.h"
+#include "unistd.h"
+#include "errno.h"
+#include "fcntl.h"
 #include "systemcalls.h"
-
-#include <stdlib.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <sys/wait.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 
 /**
  * @param cmd the command to execute with system()
@@ -16,20 +14,16 @@
 */
 bool do_system(const char *cmd)
 {
+    bool ret = true;
 
-/*
- *  Call the system() function with the command set in the cmd
- *   and return a boolean true if the system() call completed with success
- *   or false() if it returned a failure
-*/
+    int sys_ret = system(cmd);
 
-    if (!cmd) // manpage says that if cmd is NULL, system() will return 0 if no shell is available.
-              // I think this is still an error that should return false, so I force NULL cmd to return error
+    if( 0 != sys_ret)
     {
-        return false;
+        ret = false;
     }
 
-    return (system(cmd) == 0); // zero means cmd was run and it returned 0 itself, so success
+    return ret;
 }
 
 /**
@@ -58,57 +52,30 @@ bool do_exec(int count, ...)
     }
     command[count] = NULL;
 
-/*
- *   Execute a system command by calling fork, execv(),
- *   and wait instead of system (see LSP page 161).
- *   Use the command[0] as the full path to the command to execute
- *   (first argument to execv), and use the remaining arguments
- *   as second argument to the execv() command.
- *
-*/
-    // Workaround the bug in the unit test... `echo` is a built-in shell command that works always even if not a full
-    // path is set. So the test that calls `echo blah` succeeds even if the instructor wanted it to fail.
-    // Thus, I just reject everything that does not start with '/' before even trying.
-    // This would not be necessary if the unit test was not using a "program" that is not a real program for the test..
-
-    if (command[0][0] != '/')
-    {
-        return false;
-    }
+    int child_stat;
+    bool ret = true;
 
     pid_t child_pid = fork();
-    int wstatus;
 
-    if (child_pid == -1) // Error creating the child process
-    {
-        va_end(args);
-        return false;
+    if (child_pid == 0) {
+        // Child process
+        execv(command[0], command); 
+        
+        exit(errno);
     }
+    else{
+        // Parent process
+        wait(&child_stat);  // suspends execution of the parent
 
-    if (child_pid == 0) // if we are the child
-    {
-        execv(command[0], command);
-
-        // exec never returns, so if we are here, there was a problem (no need to really check the return value)
-        va_end(args);
-        return false;
-    }
-    else // if we are the parent
-    {
-        pid_t finished_pid = wait(&wstatus);
-
-        if (finished_pid == -1)
+        if (WIFEXITED(child_stat)) // Check if the child terminated normally
         {
-            va_end(args);
-            return false;
+            ret = WEXITSTATUS(child_stat) == 0 ? true: false;
         }
-
-        return (wstatus == 0);
     }
 
-    // This part should never execute
     va_end(args);
-    return false;
+
+    return ret;
 }
 
 /**
@@ -131,57 +98,31 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
     // and may be removed
     command[count] = command[count];
 
-    // Workaround the bug in the unit test... `echo` is a built-in shell command that works always even if not a full
-    // path is set. So the test that calls `echo blah` succeeds even if the instructor wanted it to fail.
-    // Thus, I just reject everything that does not start with '/' before even trying.
-    // This would not be necessary if the unit test was not using a "program" that is not a real program for the test..
-
-    if (command[0][0] != '/')
-    {
-        return false;
-    }
-
-    int outfd = open(outputfile, O_WRONLY|O_TRUNC|O_CREAT, 0644);
-    if (outfd < 0)
-    {
-        // Cant open the output file
-        return false;
-    }
-
+    bool ret = true;
+    int child_stat;
+    
+    int fd = open(outputfile, O_WRONLY|O_TRUNC|O_CREAT, 0644);
+    
     pid_t child_pid = fork();
-    int wstatus;
 
-    if (child_pid == -1) // Error creating the child process
-    {
-        va_end(args);
-        return false;
-    }
-
-    if (child_pid == 0) // if we are the child
-    {
-        dup2(outfd, 1); // Replace stdout with the file in outfd
-        close(outfd); // Needed to avoid having twice the same file open
+    if (child_pid == 0) {
+        // Child process      
+        dup2(fd, STDOUT_FILENO);
+        close(fd);
         execv(command[0], command);
-
-        // exec never returns, so if we are here, there was a problem (no need to really check the return value)
-        va_end(args);
-        return false;
-    }
-    else // if we are the parent
-    {
-        close(outfd); // Not needed anymore (the child takes care of the file)
-        pid_t finished_pid = wait(&wstatus);
-
-        if (finished_pid == -1)
+    } else {
+        // Parent process
+        wait(&child_stat);  // suspends execution of the parent
+        
+        if (WIFEXITED(child_stat)) // Check if the child terminated normally
         {
-            va_end(args);
-            return false;
+            ret = WEXITSTATUS(child_stat) == 0 ? true: false;
         }
-
-        return (wstatus == 0);
+        
+        close(fd);
     }
 
-    // This part should never execute
     va_end(args);
-    return false;
+
+    return ret;
 }
